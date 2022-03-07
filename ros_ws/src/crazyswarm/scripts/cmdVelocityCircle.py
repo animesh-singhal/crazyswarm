@@ -11,6 +11,7 @@ sleepRate = 30
 def goCircle(timeHelper, cf, totalTime, radius, kPosition):
         startTime = timeHelper.time()
         pos = cf.position()
+        print(pos)
         startPos = cf.initialPosition + np.array([0, 0, Z])
         center_circle = startPos - np.array([radius, 0, 0])
         while True:
