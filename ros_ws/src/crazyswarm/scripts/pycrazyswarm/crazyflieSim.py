@@ -304,7 +304,7 @@ class Crazyflie:
         # simulate this behavior.
         pass
 
-    def position(self):
+    def position(self): 
         return np.array(self.state.pos)
 
     def getParam(self, name):

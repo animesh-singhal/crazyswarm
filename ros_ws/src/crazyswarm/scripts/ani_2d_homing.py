@@ -8,7 +8,7 @@ Z = 1.0
 sleepRate = 30
 
 
-def goCircle(timeHelper, cf, totalTime, radius, kPosition):
+def homingPlanar(timeHelper, cf, targetYaw, kYaw):
         startTime = timeHelper.time()
         pos = cf.position()
         print(pos)
@@ -51,4 +51,5 @@ if __name__ == "__main__":
 
     allcfs.takeoff(targetHeight=Z, duration=1.0+Z)
     timeHelper.sleep(2 + Z)
-    goCircle(timeHelper, allcfs.crazyflies[0], totalTime=4, radius=1, kPosition=1)
+    #homingPlanar(timeHelper, allcfs.crazyflies[0], totalTime=4, target_yaw=45, kYaw=1)
+    homingPlanar(timeHelper, allcfs.crazyflies[0], targetYaw=45, kYaw=1)

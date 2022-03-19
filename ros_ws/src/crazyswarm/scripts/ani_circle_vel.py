@@ -39,6 +39,8 @@ def goCircle(timeHelper, cf, totalTime, radius, kPosition):
                 # cf.cmdVelocityWorld(np.array([vx, vy, 0] + kPosition * errorX), yawRate=0) 
             
                 pos = cf.position()
+                print("Yaw->"+str(cf.yaw()))
+                print("rpy->"+str(cf.rpy()))
                 f.write("{},{},{},{}\n".format(time, pos[0], pos[1], pos[2]))
              
                 timeHelper.sleepForRate(sleepRate)

@@ -27,8 +27,12 @@ def main():
     	z_nxt = 1.0
     	yaw_nxt = 2.0*np.pi*(i+1)/iter
     	pos_nxt = [x_nxt, y_nxt, z_nxt]
-    	print(pos_nxt)
+    	#print(pos_nxt)
     	cf.goTo(goal=pos_nxt, yaw=yaw_nxt, duration=2.0)
+    	#print(cf.position())
+    	print("Yaw->"+str(cf.yaw()))
+    	print("rpy->"+str(cf.rpy()))
+    	print("---")
     	timeHelper.sleep(2)
     	
     
