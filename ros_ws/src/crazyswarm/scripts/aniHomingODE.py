@@ -5,6 +5,9 @@ from scipy.integrate import solve_ivp
 import numpy as np
 import math
 import matplotlib.pyplot as plt
+from mpl_toolkits import mplot3d
+
+
 
 TAKEOFF_DURATION = 2.0
 
@@ -16,7 +19,7 @@ Y_GOAL = 60.0      # cm
 v = 10.0           # cm/s
 kAlpha = 2         # k > (v/Radius) = 2
 
-simTime = 20     # sec
+simTime = 30     # sec
 sampleTime = 1   # sec
 iterPerSample = 10
 iterTime = sampleTime/iterPerSample
@@ -103,23 +106,13 @@ def main():
     	    z_nxt = HEIGHT
     	    yaw_nxt = xInterval[j+1, 2]
     	    pos_nxt = [x_nxt, y_nxt, z_nxt]
-    	    #print(pos_nxt)
     	    cf.goTo(goal=pos_nxt, yaw=yaw_nxt, duration=iterTime)
-    	
-    	    #print(cf.position())
-    	    #print("Yaw->"+str(cf.yaw()))
-    	    #print("rpy->"+str(cf.rpy()))
-    	    #print("---")
     	    timeHelper.sleep(iterTime)
     	    
     	    xActualNext = np.array([[cf.position()[0], cf.position()[1], cf.position()[2], cf.yaw()]])
     	    xActual = np.vstack((xActual, xActualNext))
     	    
-    #print("dimension of xActual: ")	    
-    #print(np.shape(xActual))
-    #print("dimension of t: ")	    
-    #print(np.shape(tSol))
-    
+   
     cf.land(targetHeight=0.04, duration=2.5)
     timeHelper.sleep(TAKEOFF_DURATION)
     
@@ -147,9 +140,14 @@ def main():
     axis[1, 1].plot(tSol, X)
     axis[1, 1].set_title("X vs t")
   
+    fig = plt.figure()
+    ax = plt.axes(projection='3d')
+    ax.plot3D(xActual[:,0], xActual[:,1], xActual[:,2], 'gray')
+    #ax.scatter3D(xActual[:,0], xActual[:,1], xActual[:,2], cmap='Greens');
+    
     # Combine all the operations and display
     plt.show()
-
+    
     
 
 if __name__ == "__main__":
