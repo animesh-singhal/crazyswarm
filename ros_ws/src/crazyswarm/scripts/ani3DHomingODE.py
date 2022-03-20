@@ -9,39 +9,49 @@ from mpl_toolkits import mplot3d
 
 
 
+SETUP_DURATION = 2.0
 TAKEOFF_DURATION = 2.0
 
 HEIGHT = 1.0
 X_INITIAL = 0.0
 Y_INITIAL = 0.0
+Z_INITIAL = 1.0
+Alpha_INITIAL = 0.0
+Beta_INITIAL = 0.0
+
 X_GOAL = 30.0      # cm
 Y_GOAL = 60.0      # cm
+Z_GOAL = 50.0
 v = 10.0           # cm/s
 kAlpha = 2         # k > (v/Radius) = 2
+kBeta = 3          # k > (v/Radius) = 2 
 
-simTime = 20     # sec
+simTime = 40     # sec
 sampleTime = 1   # sec
 iterPerSample = 10
 iterTime = sampleTime/iterPerSample
 
-def odes(t, x, relbearing, i):
+def odes(t, x, AlphaRelBearing, BetaRelBearing):
     
     # assign each ODE to a vector element
     X = x[0]
     Y = x[1]
-    Alpha = x[2]
+    Z = x[2]
+    Alpha = x[3]
+    Beta = x[4]
     Alpha = math.atan2(np.sin(Alpha),np.cos(Alpha))
-  
+    Beta = math.atan2(np.sin(Beta),np.cos(Beta))
     # Bearing already calculated previously
     
     # define each ODE
-    dXdt = v*np.cos(Alpha) 
-    dYdt = v*np.sin(Alpha)
-    dAlphadt = -kAlpha*np.sign(relbearing)   #np.sign is signum function
-        
-    #print("t: "+str(t)+"; Alpha: "+str(Alpha)+"; Alpha_dot: "+str(dAlphadt))
-    return [dXdt, dYdt, dAlphadt]
+    dXdt = v*np.cos(Alpha)*np.cos(Beta) 
+    dYdt = v*np.sin(Alpha)*np.cos(Beta)
+    dZdt = v*np.sin(Beta)
+    dAlphadt = -kAlpha*np.sign(AlphaRelBearing)
+    dBetadt = -kBeta*np.sign(BetaRelBearing)
 
+    return [dXdt, dYdt, dZdt, dAlphadt, dBetadt]
+    
 
 def main():
     swarm = Crazyswarm()
@@ -52,44 +62,46 @@ def main():
     timeHelper.sleep(TAKEOFF_DURATION)
     
     # Ensure initial conditions:
-    initPosnSet = [X_INITIAL,Y_INITIAL,HEIGHT]
-    cf.goTo(goal=initPosnSet, yaw=0.0, duration=2.5)
-    timeHelper.sleep(2.5)
+    initPosnSet = [X_INITIAL,Y_INITIAL,Z_INITIAL]
+    cf.goTo(goal=initPosnSet, yaw=Alpha_INITIAL, duration=SETUP_DURATION)
+    timeHelper.sleep(SETUP_DURATION)
     
     
     # initial conditions
-    X_init = 0
-    Y_init = 0
-    Alpha_init = 0
-    initPos = np.array([[X_init, Y_init, Alpha_init]])
-    #initPos = np.array([[cf.position()[0], cf.position()[1], cf.yaw()]])           # Doesn't come out to be 0,0,0 
+    initStateVec = np.array([[X_INITIAL, Y_INITIAL, Z_INITIAL, Alpha_INITIAL, Beta_INITIAL]]) 
     
-    xSol = initPos    # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Should we take the freshly sensed values or the ideal case initial values i.e. 0,0,0
-    #print(xSol)
+    xSol = initStateVec    
     tSol = [0]
     
     xActual = np.array([[cf.position()[0], cf.position()[1], cf.position()[2], cf.yaw()]])
     
-    
-    
+   
     for i in range (0, simTime, sampleTime): 
         delTime = [i, i+sampleTime]  
     
-        x0 = xSol[-1,:]      # last row of xSol matrix ----------->>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Should we take the freshly sensed values or the previous values by odeSolver? 
+        x0 = xSol[-1,:]      # last row of xSol matrix ----------->>>>>>>>> Should we take the freshly sensed values or the previous values by odeSolver? We can't get Beta. Alpha is yaw so fine
         #x0 = np.array([cf.position()[0], cf.position()[1], cf.yaw()])
         X = x0[0]
         Y = x0[1]
-        Alpha = x0[2]
+        Z = x0[2]
+        Alpha = x0[3]
+        Beta = x0[4]
+        
+        
+        Alphabearing = math.atan2((Y_GOAL-Y),(X_GOAL-X)) 
+        AlphaRelBearing = Alpha-Alphabearing
+        AlphaRelBearing = math.atan2(np.sin(AlphaRelBearing), np.cos(AlphaRelBearing))
     
-        bearing = math.atan2((Y_GOAL-Y),(X_GOAL-X)) 
-        relbearing = Alpha-bearing
-        relbearing = math.atan2(np.sin(relbearing), np.cos(relbearing))
-    
+        Betabearing = math.atan2((Z_GOAL-Z),(math.sqrt((X_GOAL-X_INITIAL)**2+(Y_GOAL-Y_INITIAL)**2))) 
+        BetaRelBearing = Beta-Betabearing
+        BetaRelBearing = math.atan2(np.sin(BetaRelBearing), np.cos(BetaRelBearing))
+        
+        
         tEval=np.linspace(i, i+sampleTime, iterPerSample+1)
         #print(tEval)
         
         
-        sol = solve_ivp(odes, (i, i+sampleTime), x0, t_eval=tEval, args=(relbearing, i))     #args pass the arguments to odes function. Passing reduntant i to follow syntax
+        sol = solve_ivp(odes, (i, i+sampleTime), x0, t_eval=tEval, args=(AlphaRelBearing, BetaRelBearing))     #args pass the arguments to odes function
         xInterval=sol.y                      # xInterval will include x(@i) and x(@i+sampleTime)
         xInterval=np.transpose(xInterval)    # each row should have a new set of values of x,y,alpha
     
@@ -103,8 +115,8 @@ def main():
         for j in range (iterPerSample): 
     	    x_nxt = xInterval[j+1, 0]
     	    y_nxt = xInterval[j+1, 1] 
-    	    z_nxt = HEIGHT
-    	    yaw_nxt = xInterval[j+1, 2]
+    	    z_nxt = xInterval[j+1, 2]
+    	    yaw_nxt = xInterval[j+1, 3]
     	    pos_nxt = [x_nxt, y_nxt, z_nxt]
     	    cf.goTo(goal=pos_nxt, yaw=yaw_nxt, duration=iterTime)
     	    timeHelper.sleep(iterTime)
@@ -118,27 +130,34 @@ def main():
     
     X = xSol[:,0]
     Y = xSol[:,1]
-    Alpha = xSol[:,2]
-
+    Z = xSol[:,2]
+    Alpha = xSol[:,3]
+    Beta = xSol[:,4]
 
     # plot the results
-    figure, axis = plt.subplots(2, 2)
+    figure, axis = plt.subplots(2, 3)
 
-    # Y vs X 
-    axis[0, 0].plot(X, Y)
-    axis[0, 0].set_title("Y vs X")
-  
+    # X with time
+    axis[0, 0].plot(tSol, X)
+    axis[0, 0].set_title("X vs t")
+
+    # Y with time
+    axis[0, 1].plot(tSol, Y)
+    axis[0, 1].set_title("Y vs t")
+
+    # Z with time
+    axis[0, 2].plot(tSol, Z)
+    axis[0, 2].set_title("Z vs t")
+
+
     # Alpha with time
     axis[1, 0].plot(tSol, Alpha)
     axis[1, 0].set_title("Alpha vs t")
   
-    # Y with time
-    axis[0, 1].plot(tSol, Y)
-    axis[0, 1].set_title("Y vs t")
+    # Beta with time
+    axis[1, 1].plot(tSol, Beta)
+    axis[1, 1].set_title("Beta vs t")
   
-    # X with time
-    axis[1, 1].plot(tSol, X)
-    axis[1, 1].set_title("X vs t")
   
     fig = plt.figure()
     ax = plt.axes(projection='3d')
