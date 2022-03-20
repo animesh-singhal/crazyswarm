@@ -1,8 +1,10 @@
 """Takeoff-hover-land for one CF. Useful to validate hardware config."""
 
 from pycrazyswarm import Crazyswarm
+from scipy.integrate import solve_ivp
 import numpy as np
 import math
+import matplotlib.pyplot as plt
 
 TAKEOFF_DURATION = 2.0
 
@@ -14,12 +16,12 @@ Y_GOAL = 60.0      # cm
 v = 10.0           # cm/s
 kAlpha = 2         # k > (v/Radius) = 2
 
-simTime = 20.0     # sec
-sampleTime = 1.0   # sec
-iterPerSample = 10.0
+simTime = 20     # sec
+sampleTime = 1   # sec
+iterPerSample = 10
 iterTime = sampleTime/iterPerSample
 
-def odes(t, x):
+def odes(t, x, relbearing, i):
     
     # assign each ODE to a vector element
     X = x[0]
@@ -57,17 +59,21 @@ def main():
     #Y_init = 0
     #Alpha_init = 0
     #Initial = np.array([[X_init, Y_init, Alpha_init]])
-    initPos = np.array(cf.position())
+    initPos = np.array([cf.position()])    # Doesn't come out to be 0,0,0 
     
-    xSol = initPos 
+    xSol = initPos    # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Should we take the freshly sensed values or the ideal case initial values i.e. 0,0,0
+    #print(xSol)
     tSol = [0]
+    
+    xActual = np.array([[cf.position()[0], cf.position()[1], cf.position()[2], cf.yaw()]])
+    
     
     
     for i in range (0, simTime, sampleTime): 
         delTime = [i, i+sampleTime]  
     
-        x0 = xSol[-1,:]      #last row of xSol matrix ----------->>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Should we take the freshly sensed values or the previous values by odeSolver? 
-    
+        x0 = xSol[-1,:]      # last row of xSol matrix ----------->>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Should we take the freshly sensed values or the previous values by odeSolver? 
+        #x0 = np.array([cf.position()[0], cf.position()[1], cf.yaw()])
         X = x0[0]
         Y = x0[1]
         Alpha = x0[2]
@@ -77,23 +83,25 @@ def main():
         relbearing = math.atan2(np.sin(relbearing), np.cos(relbearing))
     
         tEval=np.linspace(i, i+sampleTime, iterPerSample+1)
+        #print(tEval)
         
-        sol = solve_ivp(odes, (i, i+sampleTime), x0, t_eval=tEval)
+        
+        sol = solve_ivp(odes, (i, i+sampleTime), x0, t_eval=tEval, args=(relbearing, i))     #args pass the arguments to odes function. Passing reduntant i to follow syntax
         xInterval=sol.y                      # xInterval will include x(@i) and x(@i+sampleTime)
         xInterval=np.transpose(xInterval)    # each row should have a new set of values of x,y,alpha
     
         tInterval=sol.t                      # i <= t <= i+sampleTime
         
+        
         # While appending solutions to master arrays, removing 1st elements as they'll be appended as the 'last element of previous iteration'
         xSol = np.vstack((xSol, xInterval[1:,:]))    #stacking new solutions (except the first row) over previous solutions
         tSol = np.hstack((tSol, tInterval[1:]))      #stacking new array without its first element to the previous array
-   
     
         for j in range (iterPerSample): 
-    	    x_nxt = xInterval[i+1, 0]
-    	    y_nxt = xInterval[i+1, 1] 
+    	    x_nxt = xInterval[j+1, 0]
+    	    y_nxt = xInterval[j+1, 1] 
     	    z_nxt = HEIGHT
-    	    yaw_nxt = xInterval[i+1, 2]
+    	    yaw_nxt = xInterval[j+1, 2]
     	    pos_nxt = [x_nxt, y_nxt, z_nxt]
     	    #print(pos_nxt)
     	    cf.goTo(goal=pos_nxt, yaw=yaw_nxt, duration=iterTime)
@@ -103,7 +111,14 @@ def main():
     	    #print("rpy->"+str(cf.rpy()))
     	    #print("---")
     	    timeHelper.sleep(iterTime)
-    	
+    	    
+    	    xActualNext = np.array([[cf.position()[0], cf.position()[1], cf.position()[2], cf.yaw()]])
+    	    xActual = np.vstack((xActual, xActualNext))
+    	    
+    #print("dimension of xActual: ")	    
+    #print(np.shape(xActual))
+    #print("dimension of t: ")	    
+    #print(np.shape(tSol))
     
     cf.land(targetHeight=0.04, duration=2.5)
     timeHelper.sleep(TAKEOFF_DURATION)
