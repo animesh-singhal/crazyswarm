@@ -17,7 +17,7 @@ Y_INITIAL = 0.0
 X_GOAL = 30.0      # cm
 Y_GOAL = 60.0      # cm
 v = 10.0           # cm/s
-kAlpha = 2         # k > (v/Radius) = 2
+kAlpha = 1         # k > (v/Radius) = 2
 
 simTime = 20     # sec
 sampleTime = 1   # sec

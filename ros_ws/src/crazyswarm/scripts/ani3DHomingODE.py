@@ -26,7 +26,7 @@ v = 10.0           # cm/s
 kAlpha = 2         # k > (v/Radius) = 2
 kBeta = 3          # k > (v/Radius) = 2 
 
-simTime = 40     # sec
+simTime = 40#40     # sec
 sampleTime = 1   # sec
 iterPerSample = 10
 iterTime = sampleTime/iterPerSample
@@ -40,7 +40,9 @@ def odes(t, x, AlphaRelBearing, BetaRelBearing):
     Alpha = x[3]
     Beta = x[4]
     Alpha = math.atan2(np.sin(Alpha),np.cos(Alpha))
-    Beta = math.atan2(np.sin(Beta),np.cos(Beta))
+    #Beta = math.atan2(np.sin(Beta),np.cos(Beta))
+    Beta = math.asin(np.sin(Beta)) ###############################
+    
     # Bearing already calculated previously
     
     # define each ODE
@@ -88,13 +90,19 @@ def main():
         Beta = x0[4]
         
         
+        Alpha = math.atan2(np.sin(Alpha),np.cos(Alpha))
         Alphabearing = math.atan2((Y_GOAL-Y),(X_GOAL-X)) 
+        
         AlphaRelBearing = Alpha-Alphabearing
         AlphaRelBearing = math.atan2(np.sin(AlphaRelBearing), np.cos(AlphaRelBearing))
     
-        Betabearing = math.atan2((Z_GOAL-Z),(math.sqrt((X_GOAL-X_INITIAL)**2+(Y_GOAL-Y_INITIAL)**2))) 
+        
+        #Betabearing = math.atan2((Z_GOAL-Z),(math.sqrt((X_GOAL-X_INITIAL)**2+(Y_GOAL-Y_INITIAL)**2))) 
+        Betabearing = math.asin((Z_GOAL-Z)/(math.sqrt( (X_GOAL-X_INITIAL)**2 + (Y_GOAL-Y_INITIAL)**2 + (Z_GOAL-Z_INITIAL)**2 )))
+        #Beta = math.asin(np.sin(Beta))  #########
+        
         BetaRelBearing = Beta-Betabearing
-        BetaRelBearing = math.atan2(np.sin(BetaRelBearing), np.cos(BetaRelBearing))
+        #BetaRelBearing = math.atan2(np.sin(BetaRelBearing), np.cos(BetaRelBearing))
         
         
         tEval=np.linspace(i, i+sampleTime, iterPerSample+1)
